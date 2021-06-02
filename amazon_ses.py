@@ -65,7 +65,6 @@ class AmazonEmail:
                           body_text: str = ""):
         """
         发送普通邮件
-        成功返回：WF_ST_SUCCESS; 失败返回：WF_ST_UNKNOWN_ERROR
         :param sender_email: 发件人邮箱地址
         :param recipient_email: 收件人邮箱地址
         :param subject: 邮件主题
@@ -95,7 +94,6 @@ class AmazonEmail:
     def send_email_dynamic(self, sender_email: str, recipient_email: str, subject: str, template_info: dict):
         """
         发送动态模板邮件
-        成功返回：WF_ST_SUCCESS; 失败返回：WF_ST_UNKNOWN_ERROR
         :param sender_email: 发件人邮箱地址
         :param recipient_email: 收件人邮箱地址
         :param template_info: 模板信息
