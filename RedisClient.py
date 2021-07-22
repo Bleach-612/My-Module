@@ -110,6 +110,13 @@ class RedisClient:
         else:
             print('failed to delete')
 
+    def __IfJsonData(self, datas):
+        for _ in datas:
+            try:
+                yield json.loads(_)
+            except:
+                yield _
+
     def batch_pick(self, name, num, _head=False):
         """
         批量取出
@@ -126,13 +133,20 @@ class RedisClient:
                 else:
                     p.lrange(name, _size-num, _size)
                     p.ltrim(name, 0, _size - num - 1)
-                data, flag = p.execute()
-                # redis_log.i nfo(f"batch pick is {flag}")
+                datas, flag = p.execute()
+                data = list(self.__IfJsonData(datas))
+
             else:
                 p.lrange(name, 0, _size)
-                [data] = p.execute()
-                self.delete(name)
-            return [json.loads(i) for i in data]
+                try:
+                    datas = p.execute()[0]
+                    if isinstance(datas, list):
+                        data = list(self.__IfJsonData(datas))
+                    self.delete(name)
+                except Exception as e:
+                    print(e)
+
+            return data
 
     def batch_pop(self, name, num=100, pop_head=True):
         """
@@ -155,10 +169,10 @@ class RedisClient:
                 for i in range(number):
                     exec(f'p.{self.redis_type}pop(name)')
                 break
+            data = list(self.__IfJsonData(p.execute()))
+            return data
 
-            return [json.loads(i) for i in p.execute()]
-
-    def batch_push(self, name, values, push_head=False):
+    def batch_push(self, name, values: list, push_head=False):
         """
         批量插入 默认从尾部插入
         :param name: 键名
@@ -170,10 +184,14 @@ class RedisClient:
             self.set_redis_type(TAIL)
 
         with self.conn.pipeline(transaction=False) as p:
-            for value in values:
-                value_str = json.dumps(value, ensure_ascii=False)
-                exec(f'p.{self.redis_type}push(name, value_str)')
-            p.execute()
+            if isinstance(values, list):
+                for value in values:
+                    if isinstance(value, dict):
+                        value_str = json.dumps(value, ensure_ascii=False)
+                    else:
+                        value_str = value
+                    exec(f'p.{self.redis_type}push(name, value_str)')
+                p.execute()
 
 
 def test():
