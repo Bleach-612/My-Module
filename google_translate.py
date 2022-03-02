@@ -3,6 +3,7 @@
 
 import execjs
 import requests
+from googletrans import Translator
 
 Translate_Languages = [
     ('gv', 'Manx', '马恩岛语'),
@@ -280,28 +281,110 @@ class GoogleTraslate:
         return result
 
 
+class GoogleTrans:
+    """
+    调用googletrans第三方包实现
+    """
+    def __init__(self, sl='auto', tl='en', **args):
+        """
+        初始化
+        :param :sl 待翻译原语种，默认值为auto
+        :param :tl 目的翻译语种
+        :param :**args 可选参数
+                service_urls=DEFAULT_CLIENT_SERVICE_URLS,   可以默认，也可以提供多个翻译域，会随机选择一个。
+                user_agent=DEFAULT_USER_AGENT,
+                raise_exception=DEFAULT_RAISE_EXCEPTION,
+                proxies: typing.Dict[str, httpcore.SyncHTTPTransport] = None,
+                timeout: Timeout = None,
+                http2=True,
+                use_fallback=False
+        """
+        self.translator = Translator(**args)
+        self.sl = self.__If_zh(sl)
+        self.tl = self.__If_zh(tl)
+
+    @staticmethod
+    def __If_zh(_language):
+        """zh无法识别，需转换为zh_CN"""
+        if _language == 'zh':
+            _language = 'zh-CN'
+        return _language
+
+    def language(self, content):
+        """
+        检测语种
+        :param content: 待检测内容
+        :return ret: Detected
+        """
+        ret = self.translator.detect(content)
+        # print(ret.__dict__)
+        return ret
+
+    def translate(self, content, sl=None, tl=None, run_max_count=3):
+        """
+        翻译 （sl、tl默认None，则为初始化值）
+        :param content: 待翻译文本
+        :param sl: 待翻译原语种
+        :param tl: 期待翻译语种
+        """
+        if sl is None:
+            sl = self.sl
+        if tl is None:
+            tl = self.tl
+        result = None
+        count = 0
+        while True:
+            try:
+                result = self.translator.translate(content, dest=self.__If_zh(tl), src=self.__If_zh(sl)).text
+                break
+            except Exception as e:
+                print(e)
+                count += 1
+                if count > run_max_count:
+                    break
+        return result
+
+
 def translate_test():
-    # 汉译英
-    gg = GoogleTraslate("zh", "en")
-    rt = gg.translate("我们一起学猫叫")
-    print(rt)
-    # 中文翻译德语
-    gg = GoogleTraslate()
-    rt = gg.translate("我们一起学猫叫", "zh", "de")
-    print(rt)
-    # 日文翻译中文
-    rt = gg.translate('もしある種の能力に喜びを感じるのであれば、あなたがその中で最強であって欲しい', "ja", "zh")
-    print(rt)
-    # 汉译英 段落
+    gg = GoogleTrans(service_urls=['translate.google.cn', 'translate.google.com'])
+    # 默认翻译为英语
     content = "根据围棋的外观，有人称它为方圆，这是因为围棋盘围棋谱围棋谱(24张)是方的。棋子、棋盒是圆形的,这是因为围棋分黑白两色。白子如白鹭。围棋还可称枰即棋盘。我们喜欢下围棋。"
-    data = GoogleTraslate().translate(content, "zh", "en")
-    print(data)
-    # 获取简称
-    dt = gg.get_short_name("德语")
-    print(dt)
+    data = gg.translate(content)
+    print("汉译音：%s" % data)
+    # 汉译西班牙
+    rt = gg.translate("我们一起学猫叫", 'zh-CN', 'es')
+    print("中文翻译西班牙语：%s" % rt)
+    # 检测语种
+    dt = gg.language(content)
+    print("检测语种：")
+    print(dt.__dict__)
+    print("language: %s, confidence: %s" % (dt.lang, dt.confidence))
+
+    # # 汉译英
+    # gg = GoogleTraslate("zh", "en")
+    # rt = gg.translate("我们一起学猫叫")
+    # print(rt)
+    # # 中文翻译德语
+    # gg = GoogleTraslate()
+    # rt = gg.translate("我们一起学猫叫", "zh", "de")
+    # print(rt)
+    # # 日文翻译中文
+    # rt = gg.translate('もしある種の能力に喜びを感じるのであれば、あなたがその中で最強であって欲しい', "ja", "zh")
+    # print(rt)
+    # # 汉译英 段落
+    # content = "根据围棋的外观，有人称它为方圆，这是因为围棋盘围棋谱围棋谱(24张)是方的。棋子、棋盒是圆形的,这是因为围棋分黑白两色。白子如白鹭。围棋还可称枰即棋盘。我们喜欢下围棋。"
+    # data = GoogleTraslate().translate(content, "zh", "en")
+    # print(data)
+    # # 获取简称
+    # dt = gg.get_short_name("德语")
+    # print(dt)
 
 
 if __name__ == '__main__':
+    """ 
+    Install:
+        python -m pip install googletrans==4.0.0rc1 -i http://pypi.douban.com/simple --trusted-host pypi.douban.com
+    """
     translate_test()
 
 
